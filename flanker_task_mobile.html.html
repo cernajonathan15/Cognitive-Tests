@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Mobile Flanker Task</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --panel: #171b26;
+      --text: #f6f7fb;
+      --muted: #b8bed1;
+      --accent: #ffffff;
+      --line: rgba(255,255,255,0.16);
+      --button: #f6f7fb;
+      --buttonText: #0f1117;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overscroll-behavior: none;
+      touch-action: manipulation;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .screen {
+      width: 100vw;
+      height: 100vh;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      position: relative;
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    .panel {
+      width: min(920px, 94vw);
+      max-height: 94vh;
+      overflow: auto;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: clamp(22px, 4vw, 42px);
+      box-shadow: 0 22px 70px rgba(0,0,0,0.35);
+      text-align: left;
+    }
+
+    h1, h2 {
+      margin: 0 0 14px;
+      line-height: 1.08;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 6vw, 4rem);
+      letter-spacing: -0.04em;
+    }
+
+    h2 {
+      font-size: clamp(1.45rem, 4vw, 2.6rem);
+    }
+
+    p, li {
+      color: var(--muted);
+      font-size: clamp(1rem, 2.3vw, 1.25rem);
+      line-height: 1.55;
+    }
+
+    .instructions-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin: 20px 0;
+    }
+
+    .instruction-card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+      background: rgba(255,255,255,0.04);
+    }
+
+    .demo-stim {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 150px;
+      height: 72px;
+      margin: 8px 0 4px;
+      padding: 0 18px;
+      background: #000;
+      color: #fff;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      border-radius: 6px;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 24px;
+      align-items: center;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 14px 22px;
+      background: var(--button);
+      color: var(--buttonText);
+      font-weight: 800;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
+
+    .small-note {
+      font-size: 0.92rem;
+      color: var(--muted);
+      margin-top: 12px;
+    }
+
+    #taskScreen {
+      background: #111;
+      padding: 0;
+    }
+
+    .tap-zone {
+      position: absolute;
+      top: 0;
+      height: 100vh;
+      width: 50vw;
+      opacity: 0;
+      z-index: 2;
+    }
+
+    #leftZone { left: 0; }
+    #rightZone { right: 0; }
+
+    .zone-label {
+      position: absolute;
+      bottom: 22px;
+      color: rgba(255,255,255,0.26);
+      font-size: clamp(1rem, 3vw, 1.4rem);
+      font-weight: 700;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .zone-label.left { left: 22px; }
+    .zone-label.right { right: 22px; }
+
+    #progress {
+      position: absolute;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.45);
+      font-size: 0.95rem;
+      letter-spacing: 0.04em;
+      z-index: 3;
+    }
+
+    #stimulusBox {
+      width: min(560px, 82vw);
+      height: min(210px, 28vh);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      color: #fff;
+      border-radius: 8px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: clamp(4rem, 19vw, 10rem);
+      font-weight: 900;
+      letter-spacing: 0.03em;
+      line-height: 1;
+      z-index: 1;
+      opacity: 0;
+    }
+
+    #stimulusBox.visible {
+      opacity: 1;
+    }
+
+    #blankMarker {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.18);
+      opacity: 0;
+    }
+
+    #blankMarker.visible {
+      opacity: 1;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 18px 0 4px;
+      font-size: clamp(0.95rem, 2.1vw, 1.15rem);
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 12px 8px;
+      text-align: left;
+    }
+
+    th {
+      color: var(--text);
+    }
+
+    td {
+      color: var(--muted);
+    }
+
+    .summary-box {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .metric-card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 16px;
+      background: rgba(255,255,255,0.04);
+    }
+
+    .metric-card .label {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+    }
+
+    .metric-card .value {
+      color: var(--text);
+      font-size: clamp(1.4rem, 4vw, 2.2rem);
+      font-weight: 900;
+    }
+
+    @media (max-width: 680px) {
+      .instructions-grid, .summary-box {
+        grid-template-columns: 1fr;
+      }
+      .panel {
+        border-radius: 0;
+        width: 100vw;
+        height: 100vh;
+        max-height: 100vh;
+      }
+      body {
+        align-items: stretch;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main id="instructionsScreen" class="screen active" aria-label="Instructions">
+    <section class="panel" id="startPanel">
+      <h1>Flanker Task</h1>
+      <p>
+        Focus on the <strong>center arrow only</strong>. Ignore the arrows around it.
+        Respond as quickly and accurately as possible.
+      </p>
+
+      <div class="instructions-grid">
+        <div class="instruction-card">
+          <strong>Tap LEFT when the center arrow points left</strong><br />
+          <span class="demo-stim">&gt;&gt;&lt;&gt;&gt;</span>
+          <p>Keyboard: left arrow or A</p>
+        </div>
+        <div class="instruction-card">
+          <strong>Tap RIGHT when the center arrow points right</strong><br />
+          <span class="demo-stim">&lt;&lt;&gt;&lt;&lt;</span>
+          <p>Keyboard: right arrow or D</p>
+        </div>
+      </div>
+
+      <p>
+        There will be <strong>50 trials</strong>. Each arrow display appears briefly, for
+        <strong>83 ms</strong>. Congruent and incongruent trials occur equally often, and the delay between trials is jittered.
+      </p>
+
+      <div class="button-row">
+        <button id="startButton" type="button">Start task</button>
+        <span class="small-note">Press the spacebar or tap this screen to begin.</span>
+      </div>
+    </section>
+  </main>
+
+  <main id="taskScreen" class="screen" aria-label="Task">
+    <div id="progress">Trial 1 / 50</div>
+    <div id="leftZone" class="tap-zone" aria-label="left response"></div>
+    <div id="rightZone" class="tap-zone" aria-label="right response"></div>
+    <div class="zone-label left">LEFT</div>
+    <div class="zone-label right">RIGHT</div>
+    <div id="stimulusBox" aria-live="off"></div>
+    <div id="blankMarker"></div>
+  </main>
+
+  <main id="resultsScreen" class="screen" aria-label="Results">
+    <section class="panel">
+      <h2>Results</h2>
+      <p>Reaction time is calculated from correct-response trials only. Accuracy includes missed responses.</p>
+
+      <div class="summary-box">
+        <div class="metric-card">
+          <div class="label">Overall mean RT</div>
+          <div class="value" id="overallRT">--</div>
+        </div>
+        <div class="metric-card">
+          <div class="label">Overall accuracy</div>
+          <div class="value" id="overallAcc">--</div>
+        </div>
+      </div>
+
+      <table aria-label="Condition-specific results">
+        <thead>
+          <tr>
+            <th>Condition</th>
+            <th>Trials</th>
+            <th>Mean RT</th>
+            <th>Accuracy</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Congruent</td>
+            <td id="congN">25</td>
+            <td id="congRT">--</td>
+            <td id="congAcc">--</td>
+          </tr>
+          <tr>
+            <td>Incongruent</td>
+            <td id="incongN">25</td>
+            <td id="incongRT">--</td>
+            <td id="incongAcc">--</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="button-row">
+        <button id="downloadButton" type="button">Download trial-level CSV</button>
+        <button id="restartButton" class="secondary" type="button">Run again</button>
+      </div>
+      <p class="small-note">
+        Note: phone and browser timing is useful for classroom demonstration, but not ideal for research-grade reaction-time measurement.
+      </p>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const TOTAL_TRIALS = 50;
+      const STIM_DURATION_MS = 83;
+      const PRE_STIM_DELAY_MS = 500;
+      const ISI_OPTIONS_MS = [1100, 1500];
+
+      const screens = {
+        instructions: document.getElementById("instructionsScreen"),
+        task: document.getElementById("taskScreen"),
+        results: document.getElementById("resultsScreen")
+      };
+
+      const startPanel = document.getElementById("startPanel");
+      const startButton = document.getElementById("startButton");
+      const restartButton = document.getElementById("restartButton");
+      const downloadButton = document.getElementById("downloadButton");
+      const leftZone = document.getElementById("leftZone");
+      const rightZone = document.getElementById("rightZone");
+      const stimulusBox = document.getElementById("stimulusBox");
+      const blankMarker = document.getElementById("blankMarker");
+      const progress = document.getElementById("progress");
+
+      let trials = [];
+      let results = [];
+      let trialIndex = -1;
+      let currentTrial = null;
+      let state = "instructions";
+      let stimOnsetTime = null;
+      let responded = false;
+      let trialStartTimer = null;
+      let stimOffTimer = null;
+      let trialEndTimer = null;
+      let taskStartISO = null;
+
+      function showScreen(name) {
+        Object.values(screens).forEach(screen => screen.classList.remove("active"));
+        screens[name].classList.add("active");
+      }
+
+      function shuffle(array) {
+        const out = array.slice();
+        for (let i = out.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [out[i], out[j]] = [out[j], out[i]];
+        }
+        return out;
+      }
+
+      function buildTrials() {
+        const base = [];
+
+        // 25 congruent and 25 incongruent trials total.
+        // Targets are balanced overall: 25 left, 25 right.
+        for (let i = 0; i < 13; i++) base.push(makeTrial("congruent", "left"));
+        for (let i = 0; i < 12; i++) base.push(makeTrial("congruent", "right"));
+        for (let i = 0; i < 12; i++) base.push(makeTrial("incongruent", "left"));
+        for (let i = 0; i < 13; i++) base.push(makeTrial("incongruent", "right"));
+
+        // Equal number of 1100 ms and 1500 ms ISIs, jittered across the task.
+        const isiValues = shuffle([
+          ...Array(TOTAL_TRIALS / 2).fill(ISI_OPTIONS_MS[0]),
+          ...Array(TOTAL_TRIALS / 2).fill(ISI_OPTIONS_MS[1])
+        ]);
+
+        return shuffle(base).map((trial, idx) => ({
+          ...trial,
+          trial_number: idx + 1,
+          isi_ms: isiValues[idx]
+        }));
+      }
+
+      function makeTrial(condition, target) {
+        let stimulus;
+        if (condition === "congruent" && target === "left") stimulus = "<<<<<";
+        if (condition === "congruent" && target === "right") stimulus = ">>>>>";
+        if (condition === "incongruent" && target === "left") stimulus = ">><>>";
+        if (condition === "incongruent" && target === "right") stimulus = "<<><<";
+        return { condition, target, stimulus };
+      }
+
+      async function requestFullscreenIfPossible() {
+        try {
+          if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+            await document.documentElement.requestFullscreen();
+          }
+        } catch (err) {
+          // Fullscreen can be blocked by some mobile browsers. The task still works.
+        }
+      }
+
+      function clearTimers() {
+        [trialStartTimer, stimOffTimer, trialEndTimer].forEach(timer => {
+          if (timer) window.clearTimeout(timer);
+        });
+        trialStartTimer = null;
+        stimOffTimer = null;
+        trialEndTimer = null;
+      }
+
+      function startTask(event) {
+        if (event) event.stopPropagation();
+        if (state === "trial") return;
+
+        requestFullscreenIfPossible();
+        clearTimers();
+        trials = buildTrials();
+        results = [];
+        trialIndex = -1;
+        taskStartISO = new Date().toISOString();
+        showScreen("task");
+        nextTrial();
+      }
+
+      function nextTrial() {
+        clearTimers();
+        trialIndex += 1;
+
+        if (trialIndex >= trials.length) {
+          finishTask();
+          return;
+        }
+
+        currentTrial = trials[trialIndex];
+        responded = false;
+        stimOnsetTime = null;
+        state = "trial";
+        progress.textContent = `Trial ${trialIndex + 1} / ${TOTAL_TRIALS}`;
+        blankMarker.classList.remove("visible");
+
+        trialStartTimer = window.setTimeout(() => {
+          stimulusBox.textContent = currentTrial.stimulus;
+          stimulusBox.classList.add("visible");
+          stimOnsetTime = performance.now();
+
+          stimOffTimer = window.setTimeout(() => {
+            stimulusBox.classList.remove("visible");
+            blankMarker.classList.add("visible");
+          }, STIM_DURATION_MS);
+
+          trialEndTimer = window.setTimeout(() => {
+            if (!responded) {
+              recordResponse({ response: "none", rt_ms: null, correct: false, missed: true });
+            }
+            blankMarker.classList.remove("visible");
+            trialStartTimer = window.setTimeout(nextTrial, 0);
+          }, STIM_DURATION_MS + currentTrial.isi_ms);
+        }, PRE_STIM_DELAY_MS);
+      }
+
+      function handleResponse(responseDirection) {
+        if (state !== "trial" || !currentTrial || stimOnsetTime === null || responded) return;
+        const rt = performance.now() - stimOnsetTime;
+        const correct = responseDirection === currentTrial.target;
+        recordResponse({
+          response: responseDirection,
+          rt_ms: Math.round(rt),
+          correct,
+          missed: false
+        });
+      }
+
+      function recordResponse({ response, rt_ms, correct, missed }) {
+        if (responded) return;
+        responded = true;
+        results.push({
+          task_start_iso: taskStartISO,
+          trial_number: currentTrial.trial_number,
+          condition: currentTrial.condition,
+          target: currentTrial.target,
+          stimulus: currentTrial.stimulus,
+          stimulus_duration_ms: STIM_DURATION_MS,
+          isi_ms: currentTrial.isi_ms,
+          response,
+          correct,
+          missed,
+          rt_ms
+        });
+      }
+
+      function mean(values) {
+        const clean = values.filter(v => Number.isFinite(v));
+        if (!clean.length) return null;
+        return clean.reduce((a, b) => a + b, 0) / clean.length;
+      }
+
+      function formatRT(value) {
+        return value === null ? "N/A" : `${Math.round(value)} ms`;
+      }
+
+      function formatAccuracy(correctCount, n) {
+        if (!n) return "N/A";
+        return `${Math.round((correctCount / n) * 100)}%`;
+      }
+
+      function summarize(condition = null) {
+        const rows = condition ? results.filter(r => r.condition === condition) : results.slice();
+        const n = rows.length;
+        const correctRows = rows.filter(r => r.correct);
+        return {
+          n,
+          meanRT: mean(correctRows.map(r => r.rt_ms)),
+          correct: correctRows.length,
+          accuracy: n ? correctRows.length / n : null
+        };
+      }
+
+      function finishTask() {
+        clearTimers();
+        state = "done";
+        stimulusBox.classList.remove("visible");
+        blankMarker.classList.remove("visible");
+
+        const overall = summarize();
+        const cong = summarize("congruent");
+        const incong = summarize("incongruent");
+
+        document.getElementById("overallRT").textContent = formatRT(overall.meanRT);
+        document.getElementById("overallAcc").textContent = formatAccuracy(overall.correct, overall.n);
+        document.getElementById("congN").textContent = cong.n;
+        document.getElementById("congRT").textContent = formatRT(cong.meanRT);
+        document.getElementById("congAcc").textContent = formatAccuracy(cong.correct, cong.n);
+        document.getElementById("incongN").textContent = incong.n;
+        document.getElementById("incongRT").textContent = formatRT(incong.meanRT);
+        document.getElementById("incongAcc").textContent = formatAccuracy(incong.correct, incong.n);
+
+        showScreen("results");
+      }
+
+      function csvEscape(value) {
+        if (value === null || value === undefined) return "";
+        const str = String(value);
+        if (/[",\n]/.test(str)) return `"${str.replace(/"/g, '""')}"`;
+        return str;
+      }
+
+      function downloadCSV() {
+        if (!results.length) return;
+        const headers = [
+          "task_start_iso",
+          "trial_number",
+          "condition",
+          "target",
+          "stimulus",
+          "stimulus_duration_ms",
+          "isi_ms",
+          "response",
+          "correct",
+          "missed",
+          "rt_ms"
+        ];
+        const lines = [
+          headers.join(","),
+          ...results.map(row => headers.map(h => csvEscape(row[h])).join(","))
+        ];
+        const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+        a.href = url;
+        a.download = `flanker_task_results_${stamp}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+
+      leftZone.addEventListener("pointerdown", e => {
+        e.preventDefault();
+        handleResponse("left");
+      });
+
+      rightZone.addEventListener("pointerdown", e => {
+        e.preventDefault();
+        handleResponse("right");
+      });
+
+      startButton.addEventListener("click", startTask);
+      restartButton.addEventListener("click", startTask);
+      downloadButton.addEventListener("click", downloadCSV);
+
+      startPanel.addEventListener("click", event => {
+        if (event.target === startButton) return;
+        if (state === "instructions") startTask(event);
+      });
+
+      document.addEventListener("keydown", event => {
+        const key = event.key.toLowerCase();
+        if (key === " " && (state === "instructions" || state === "done")) {
+          event.preventDefault();
+          startTask(event);
+          return;
+        }
+        if (state === "trial") {
+          if (key === "arrowleft" || key === "a") {
+            event.preventDefault();
+            handleResponse("left");
+          }
+          if (key === "arrowright" || key === "d") {
+            event.preventDefault();
+            handleResponse("right");
+          }
+        }
+      });
+
+      window.addEventListener("beforeunload", clearTimers);
+    })();
+  </script>
+</body>
+</html>
